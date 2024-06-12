@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExecutionContext xmlns="http://www.xact.dk/xatester/v/1" environment="5b508b8a787be73b59238d38" logLevel="INFO" remote="false" useSimulations="true" uploadResult="false" timeout="300" readTimeout="30" debuggerType="NONE" jobInfoInterval="3">
+  <ExtensionData>
+    <Parameter key="load_lib">
+      <Value>SALESSUP.#0000442.UNIT.LOAD</Value>
+    </Parameter>
+    <Parameter key="unittest.loadlibraries">
+      <Value>${load_lib}</Value>
+      <Value>CEE.SCEERUN</Value>
+    </Parameter>
+  </ExtensionData>
+  <XaUnit xmlns:data="http://www.xact.dk/xatester/data/v/1" componentNameUnderTest="CWXTCOB" caseInsensitiveCompare="false" path="CWXTCOB_Negative_Bad_Parm_Length.context">
+    <Test>
+      <Unittest testscenariopath="CWXTCOB_Negative_Bad_Parm_Length.testscenario" moduleName="CWXTCOB" />
+    </Test>
+  </XaUnit>
+</ExecutionContext>
