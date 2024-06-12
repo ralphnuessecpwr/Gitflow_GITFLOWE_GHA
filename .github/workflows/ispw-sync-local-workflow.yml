@@ -1,0 +1,213 @@
+name: code-pipeline-sync-local
+
+
+on: 
+  push:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Proceed'
+        required: true
+        default: 'Yes'
+        type: choice
+        options:
+          - Yes
+          - No
+
+jobs:
+  feature-branch-build:
+   if: (startsWith(github.ref, 'refs/heads/feature/'))
+   runs-on: [self-hosted]
+   env:
+      Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
+   steps:
+      - name: checkout step
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}      
+      - name: sync step
+        uses: bmc-compuware/ispw-sync-local@ZENG-318739
+        id: sync
+        with:
+          host: ${{ vars.HCI_HOST }}
+          port: ${{ vars.HCI_PORT }}
+          uid: ${{ vars.TSO_USER }}
+          pass: ${{ secrets.TSO_TOKEN }}
+          runtimeConfiguration: ${{ vars.CP_RUNTIME }}
+          stream: ${{ vars.CP_STREAM }}
+          application: ${{ vars.CP_APPL }}
+          subAppl: ${{ vars.CP_SUBAPPL }}
+          checkoutLevel: 'FEAT'
+          gitUid: ${{ vars.GIT_USERID }}
+          gitToken: ${{ secrets.GIT_TOKEN }}
+          winTopazPath: ${{ env.Win_Topaz_Location }}
+          containerCreation: 'per-branch'
+          showEnv: true
+          assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
+          ispwConfigPath: 'GenApp_MainframeCore\ispwconfig.yml'
+
+      - name: Check Build Parms
+        shell: pwsh
+        id: checkbuild
+        run: |
+            if(-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
+   
+             Write-Host "No Mainframe Build parameters were found. Likely, no MF components were modified. The build will continue and just execute a code scan."
+             Write-Host "##vso[task.complete result=Failed;]DONE"
+            }
+            else {
+   
+             Write-Host "Mainframe Build parameters were found. Will continue with full Mainframe Build process."
+           
+             [string]$fileContent  = ''          
+             $fileContent          = Get-Content .\automaticBuildParams.txt
+             $content              = ''
+   
+             foreach ($line in $fileContent) { $content = $content + "`n" + $line }
+             
+             $json                 = ConvertFrom-JSON $content
+   
+             $taskParm             = ""
+   
+             foreach($taskId in $json.taskIds) {
+                 $taskParm = $taskParm + $taskId + ","
+             }
+   
+             $taskParm = $taskParm.Substring(0,$taskParm.Length - 1)
+   
+             $taskLevel    = $json.taskLevel
+             $assignmentId = $json.containerId
+   
+             Write-Host "Identified" 
+             Write-Host "  Tasks"
+             Write-Host $taskParm
+             Write-Host "  Assignment"
+             Write-Host $assignmentId
+             Write-Host "  Level"
+             Write-Host $taskLevel
+   
+             Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
+             Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
+             Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
+            }
+   
+      - name: Build
+        uses: bmc-compuware/ispw-build@v1
+        id: build
+        with:
+          ces_url: ${{ vars.CES_URL }}
+          ces_token: ${{ secrets.CES_TOKEN }}
+          srid: 'ispw'
+          runtime_configuration: ${{ vars.CP_RUNTIME }}
+          build_automatically: ${{ steps.sync.outputs.automaticBuildJson }}
+      - name: Get the number of build failures
+        run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
+
+      - name: Run Unit Tests
+        shell: pwsh
+        id: runTests
+        run: |
+            echo Executing Unit Tests using Parameters
+            echo Environment      : 5c519facfba8720a90ccc645
+            echo User ID          : ${{ vars.TSO_USER }}
+            echo CES URI          : http://cwc2.bmc.com:2020
+            echo CES User ID      : ${{ vars.TSO_USER }}
+            echo Test Folder      : ./GenApp_MainframeCore/Tests/Unit
+            
+            ${{ vars.CLI_LOCATION }}\TotalTestFTCLI.bat -code 1047 -e 5c519facfba8720a90ccc645 -u  ${{ vars.TSO_USER }} -p  ${{ secrets.TSO_TOKEN }} -s http://cwc2.bmc.com:2020/totaltestapi/ -cesu  ${{ vars.TSO_USER }} -cesp  ${{ secrets.TSO_TOKEN }} -f ./GenApp_MainframeCore/Tests/Unit -pnf changedPrograms.json -ccrepo 'PFHMKS0.XPCOVER.REPOST' -ctxvars '"ispw_app=MKS1,ispw_level=QA1,"' -R -G -v 6 -l jenkins -loglevel INFO -data ${{ github.workspace }}\ispwcliwk
+
+
+  release-branch-build:
+   if: (startsWith(github.ref, 'refs/heads/release/'))
+   runs-on: [self-hosted]
+   env:
+    Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
+   steps:
+      - name: checkout step
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+          
+      - name: Sync code 
+        shell: pwsh
+        id: sync
+        run: |
+         $currentTag = (git tag --sort=-refname).Split("`n")[0].Trim()
+         $previousTag = (git tag --sort=-refname).Split("`n")[1].Trim()
+            
+         $fromCommit = (git rev-list -1 $previousTag)
+         $toCommit = (git rev-parse --verify HEAD)
+            
+         $currentCommit  = $toCommit
+         $previousCommit = $fromCommit
+         
+         cmd.exe /c "${{ env.Win_Topaz_Location }}\IspwCLI.bat" -operation syncGitToIspw -gitLocalPath '.\' -data ${{ github.workspace }}\ispwcliwk  -gitBranch ${{ github.ref_name }} -host ${{ vars.HCI_HOST }} -port  ${{ vars.HCI_PORT }} -id ${{ vars.TSO_USER }} -pass ${{ secrets.TSO_TOKEN }} -protocol None -code 1047 -timeout 0 -ispwServerConfig ${{ vars.CP_RUNTIME }} -ispwConfigPath "GenApp_MainframeCore\ispwconfig-nosb.yml" -ispwServerStream ${{ vars.CP_STREAM }} -ispwServerApp ${{ vars.CP_APPL }} -ispwCheckoutLevel "RLSE" -ispwContainerCreation "per-branch" -assignmentPrefix ${{ vars.CP_ASSIGNPREFIX }} -gitRepoUrl "https://github.com/CPWRGIT/GITFLOW_GFLD_GHA.git" -gitFromHash $previousCommit -gitCommit $currentCommit 
+    
+      - name: Check Build Parms
+        shell: pwsh
+        id: checkbuild
+        run: |
+          if(-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
+ 
+           Write-Host "No Mainframe Build parameters were found. Likely, no MF components were modified. The build will continue and just execute a code scan."
+           Write-Host "##vso[task.complete result=Failed;]DONE"
+          }
+          else {
+ 
+           Write-Host "Mainframe Build parameters were found. Will continue with full Mainframe Build process."
+         
+           [string]$fileContent  = ''          
+           $fileContent          = Get-Content .\automaticBuildParams.txt
+           $content              = ''
+ 
+           foreach ($line in $fileContent) { $content = $content + "`n" + $line }
+           
+           $json                 = ConvertFrom-JSON $content
+ 
+           $taskParm             = ""
+ 
+           foreach($taskId in $json.taskIds) {
+               $taskParm = $taskParm + $taskId + ","
+           }
+ 
+           $taskParm = $taskParm.Substring(0,$taskParm.Length - 1)
+ 
+           $taskLevel    = $json.taskLevel
+           $assignmentId = $json.containerId
+
+           Write-Host "Build JSON: " 
+           Write-Host $fileContent
+           Write-Host "Identified" 
+           Write-Host "  Tasks"
+           Write-Host $taskParm
+           Write-Host "  Assignment"
+           Write-Host $assignmentId
+           Write-Host "  Level"
+           Write-Host $taskLevel
+ 
+           Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
+           Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
+           Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
+           echo "::set-output name=BuildJSON::$fileContent"
+
+           Write-Host $BuildJSON
+          }
+ 
+      - name: Build
+        uses: bmc-compuware/ispw-build@v1
+        id: build
+        with:
+          ces_url: ${{ vars.CES_URL }}
+          ces_token: ${{ secrets.CES_TOKEN }}
+          srid: 'ispw'
+          runtime_configuration: ${{ vars.CP_RUNTIME }}
+          build_automatically: ${{ steps.checkbuild.outputs.BuildJSON }}
+          
+      - name: Get the number of build failures
+        run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
+             
+      - name: Run Tests
+        run: echo "Ran Tests successfully!"
+      
