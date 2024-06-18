@@ -54,7 +54,7 @@ jobs:
             if(-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
    
              Write-Host "No Mainframe Build parameters were found. Likely, no MF components were modified. The build will continue and just execute a code scan."
-             Write-Host "##vso[task.complete result=Failed;]DONE"
+             #Write-Host "##vso[task.complete result=Failed;]DONE"
             }
             else {
    
@@ -87,9 +87,10 @@ jobs:
              Write-Host "  Level"
              Write-Host $taskLevel
    
-             Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
-             Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
-             Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
+             #Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
+             #Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
+             #Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
+
             }
    
       - name: Build
@@ -152,7 +153,7 @@ jobs:
           if(-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
  
            Write-Host "No Mainframe Build parameters were found. Likely, no MF components were modified. The build will continue and just execute a code scan."
-           Write-Host "##vso[task.complete result=Failed;]DONE"
+           #Write-Host "##vso[task.complete result=Failed;]DONE"
           }
           else {
  
@@ -187,10 +188,12 @@ jobs:
            Write-Host "  Level"
            Write-Host $taskLevel
  
-           Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
-           Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
-           Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
-           echo "::set-output name=BuildJSON::$fileContent"
+           #Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
+           #Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
+           #Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
+           #echo "::set-output name=BuildJSON::$fileContent"
+           echo "BuildJSON=$fileContent" >> "$GITHUB_OUTPUT"
+           echo "assignmentId=$assignmentId" >> "$GITHUB_OUTPUT"
 
            Write-Host $BuildJSON
           }
@@ -215,4 +218,46 @@ jobs:
         shell: powershell
         id: startrelease
         run: |
-          $Write-Host "${{ github.ref_name }}"
+          Write-Host "${{ github.ref_name }}"
+          Write-Host "${{ steps.checkbuild.outputs.assignmentId }}"
+
+          $releaseTag = "${{ github.ref_name }}".Substring(1,8).Replace('.', '')
+          $assignmentId = "${{ steps.checkbuild.outputs.assignmentId }}"
+          $releaseId  = "${{ vars.CP_ASSIGNPREFIX }}$releaseTag"
+
+          Write-Host $releaseId
+
+          $restUri = "https://vsrm.dev.azure.com/rnuesse/GitFlow_GITFLOWE_GHA/_apis/release/releases?api-version=5.1"
+                      
+          $headers = @{}
+          $headers.Add("Authorization", "${{ secrets.ADO_TOKEN }}")
+          $headers.Add("Content-Type", "application/json")
+          
+          Write-Host "Release Tag : $(releaseTag)"
+          Write-Host "Assignment  : $(assignmentId)"
+
+          $requestBody = '{
+            "definitionId": "$(releaseDefinitionId)",
+            "variables": {
+              "assignmentId": {
+                "value": "$(assignmentId)"
+              },
+              "releaseTag": {
+                "value": "$(releaseTag)"
+              },
+              "releaseId": {
+                "value": "'+$releaseId+'"
+              }
+            }
+          }'
+
+          Write-Host "Triggering Azure Release using REST API:"
+          Write-Host "URL"
+          Write-Host $restUri
+          Write-Host "Body"
+          Write-Host $requestBody
+
+          #$response = Invoke-RestMethod -Uri $restUri -method POST -headers $headers -body $requestBody
+
+          #Write-Host "Response"
+          #Write-Host $response
