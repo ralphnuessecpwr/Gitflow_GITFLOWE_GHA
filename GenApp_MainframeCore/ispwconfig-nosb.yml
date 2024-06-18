@@ -1,0 +1,35 @@
+!!com.compuware.ispw.wzzms.models.IspwRoot
+ispwApplication:
+  host: cwcc.bmc.com
+  port: 16196
+  runtimeConfig: iccga
+  stream: GITFLOW
+  application: GITFLOWE
+  subAppl: GITFLOWE
+  assignmentPrefix: GFLE
+  sandbox: 'N'
+  pathMappings:
+  - path: "**/Sources/Progs"
+    types:
+    - fileExtension: cbl
+      ispwType: COB
+    - fileExtension: pli
+      ispwType: PLI
+  - path: "**/Sources/Subs"
+    types:
+    - fileExtension: cbl
+      ispwType: COB
+      progType: 'No'
+    - fileExtension: pli
+      ispwType: PLI
+      progType: 'No'
+  - path: "**/Sources/Jobs"
+    types:
+    - fileExtension: jcl
+      ispwType: JOB                        
+  - path: "**/Sources/Copys"
+    types:
+    - fileExtension: cpy
+      ispwType: COPY
+    - fileExtension: incl
+      ispwType: INCL
