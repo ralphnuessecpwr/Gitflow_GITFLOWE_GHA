@@ -260,7 +260,7 @@ jobs:
           Write-Host "Body"
           Write-Host $requestBody
 
-          #$response = Invoke-RestMethod -Uri $restUri -method POST -headers $headers -body $requestBody
+          $response = Invoke-RestMethod -Uri $restUri -method POST -headers $headers -body $requestBody
 
-          #Write-Host "Response"
-          #Write-Host $response
+          Write-Host "Response"
+          Write-Host $response
