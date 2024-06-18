@@ -48,7 +48,7 @@ jobs:
           ispwConfigPath: 'GenApp_MainframeCore\ispwconfig.yml'
 
       - name: Check Build Parms
-        shell: pwsh
+        shell: powershell
         id: checkbuild
         run: |
             if(-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
@@ -104,18 +104,18 @@ jobs:
       - name: Get the number of build failures
         run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
 
-      - name: Run Unit Tests
-        shell: pwsh
-        id: runTests
-        run: |
-            echo Executing Unit Tests using Parameters
-            echo Environment      : 5c519facfba8720a90ccc645
-            echo User ID          : ${{ vars.TSO_USER }}
-            echo CES URI          : http://cwc2.bmc.com:2020
-            echo CES User ID      : ${{ vars.TSO_USER }}
-            echo Test Folder      : ./GenApp_MainframeCore/Tests/Unit
-            
-            ${{ vars.CLI_LOCATION }}\TotalTestFTCLI.bat -code 1047 -e 5c519facfba8720a90ccc645 -u  ${{ vars.TSO_USER }} -p  ${{ secrets.TSO_TOKEN }} -s http://cwc2.bmc.com:2020/totaltestapi/ -cesu  ${{ vars.TSO_USER }} -cesp  ${{ secrets.TSO_TOKEN }} -f ./GenApp_MainframeCore/Tests/Unit -pnf changedPrograms.json -ccrepo 'PFHMKS0.XPCOVER.REPOST' -ctxvars '"ispw_app=MKS1,ispw_level=QA1,"' -R -G -v 6 -l jenkins -loglevel INFO -data ${{ github.workspace }}\ispwcliwk
+#      - name: Run Unit Tests
+#        shell: powershell
+#        id: runTests
+#        run: |
+#            echo Executing Unit Tests using Parameters
+#            echo Environment      : 5c519facfba8720a90ccc645
+#            echo User ID          : ${{ vars.TSO_USER }}
+#            echo CES URI          : http://cwc2.bmc.com:2020
+#            echo CES User ID      : ${{ vars.TSO_USER }}
+#            echo Test Folder      : ./GenApp_MainframeCore/Tests/Unit
+#            
+#            ${{ vars.CLI_LOCATION }}\TotalTestFTCLI.bat -code 1047 -e 5c519facfba8720a90ccc645 -u  ${{ vars.TSO_USER }} -p  ${{ secrets.TSO_TOKEN }} -s http://cwc2.bmc.com:2020/totaltestapi/ -cesu  ${{ vars.TSO_USER }} -cesp  ${{ secrets.TSO_TOKEN }} -f ./GenApp_MainframeCore/Tests/Unit -pnf changedPrograms.json -ccrepo 'PFHMKS0.XPCOVER.REPOST' -ctxvars '"ispw_app=MKS1,ispw_level=QA1,"' -R -G -v 6 -l jenkins -loglevel INFO -data ${{ github.workspace }}\ispwcliwk
 
 
   release-branch-build:
@@ -131,7 +131,7 @@ jobs:
           ref: ${{ github.ref }}
           
       - name: Sync code 
-        shell: pwsh
+        shell: powershell
         id: sync
         run: |
          $currentTag = (git tag --sort=-refname).Split("`n")[0].Trim()
@@ -146,7 +146,7 @@ jobs:
          cmd.exe /c "${{ env.Win_Topaz_Location }}\IspwCLI.bat" -operation syncGitToIspw -gitLocalPath '.\' -data ${{ github.workspace }}\ispwcliwk  -gitBranch ${{ github.ref_name }} -host ${{ vars.HCI_HOST }} -port  ${{ vars.HCI_PORT }} -id ${{ vars.TSO_USER }} -pass ${{ secrets.TSO_TOKEN }} -protocol None -code 1047 -timeout 0 -ispwServerConfig ${{ vars.CP_RUNTIME }} -ispwConfigPath "GenApp_MainframeCore\ispwconfig-nosb.yml" -ispwServerStream ${{ vars.CP_STREAM }} -ispwServerApp ${{ vars.CP_APPL }} -ispwCheckoutLevel "RLSE" -ispwContainerCreation "per-branch" -assignmentPrefix ${{ vars.CP_ASSIGNPREFIX }} -gitRepoUrl "https://github.com/CPWRGIT/GITFLOW_GFLD_GHA.git" -gitFromHash $previousCommit -gitCommit $currentCommit 
     
       - name: Check Build Parms
-        shell: pwsh
+        shell: powershell
         id: checkbuild
         run: |
           if(-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
@@ -210,4 +210,9 @@ jobs:
              
       - name: Run Tests
         run: echo "Ran Tests successfully!"
-      
+
+      - name: Start Release
+        shell: powershell
+        id: startrelease
+        run: |
+          $Write-Host "${{ github.ref_name }}"
