@@ -210,4 +210,9 @@ jobs:
              
       - name: Run Tests
         run: echo "Ran Tests successfully!"
-      
+
+      - name: Start Release
+        shell: powershell
+        id: startrelease
+        run: |
+          $Write-Host "${{ github.ref_name }}"
