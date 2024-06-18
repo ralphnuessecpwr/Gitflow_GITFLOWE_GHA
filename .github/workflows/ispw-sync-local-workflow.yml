@@ -191,11 +191,12 @@ jobs:
            #Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
            #Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
            #Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
-           #echo "::set-output name=BuildJSON::$fileContent"
-           echo "BuildJSON=$fileContent" >> "$GITHUB_OUTPUT"
-           echo "assignmentId=$assignmentId" >> "$GITHUB_OUTPUT"
+           echo "::set-output name=BuildJSON::$fileContent"
+           echo "::set-output name=assignmentId::$assignmentId"
+           #echo "BuildJSON=$fileContent" >> "$GITHUB_OUTPUT"
+           #echo "assignmentId=$assignmentId" >> "$GITHUB_OUTPUT"
 
-           Write-Host $BuildJSON
+           #Write-Host $BuildJSON
           }
  
       - name: Build
