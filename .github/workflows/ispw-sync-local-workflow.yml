@@ -219,13 +219,15 @@ jobs:
         shell: powershell
         id: startrelease
         run: |
-          Write-Host "${{ github.ref_name }}"
-          Write-Host "${{ steps.checkbuild.outputs.assignmentId }}"
+          $refName = "${{ github.ref_name }}"
 
-          $releaseTag = "${{ github.ref_name }}".Substring(1,8).Replace('.', '')
+          $releaseTag = $refName.Substring($refName.LastIndexOf('/')+1,9)
+          $releaseSuffix = $releaseTag.Substring(1,8).Replace('.','')
           $assignmentId = "${{ steps.checkbuild.outputs.assignmentId }}"
-          $releaseId  = "${{ vars.CP_ASSIGNPREFIX }}$releaseTag"
+          $releaseId  = "GFLE$releaseSuffix"
 
+          Write-Host $releaseTag
+          Write-Host $assignmentId
           Write-Host $releaseId
 
           $restUri = "https://vsrm.dev.azure.com/rnuesse/GitFlow_GITFLOWE_GHA/_apis/release/releases?api-version=5.1"
@@ -234,20 +236,20 @@ jobs:
           $headers.Add("Authorization", "${{ secrets.ADO_TOKEN }}")
           $headers.Add("Content-Type", "application/json")
           
-          Write-Host "Release Tag : $(releaseTag)"
-          Write-Host "Assignment  : $(assignmentId)"
+          Write-Host "Release Tag : $releaseTag"
+          Write-Host "Assignment  : $assignmentId"
 
           $requestBody = '{
-            "definitionId": "$(releaseDefinitionId)",
+            "definitionId": "1",
             "variables": {
               "assignmentId": {
-                "value": "$(assignmentId)"
+                "value": "$assignmentId"
               },
               "releaseTag": {
-                "value": "$(releaseTag)"
+                "value": "$releaseTag"
               },
               "releaseId": {
-                "value": "'+$releaseId+'"
+                "value": "$releaseId"
               }
             }
           }'
