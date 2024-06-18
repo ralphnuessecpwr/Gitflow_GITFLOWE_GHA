@@ -243,13 +243,13 @@ jobs:
             "definitionId": "1",
             "variables": {
               "assignmentId": {
-                "value": "$assignmentId"
+                "value": "'+$assignmentId+'"
               },
               "releaseTag": {
-                "value": "$releaseTag"
+                "value": "'+$releaseTag+'"
               },
               "releaseId": {
-                "value": "$releaseId"
+                "value": "'+$releaseId+'"
               }
             }
           }'
