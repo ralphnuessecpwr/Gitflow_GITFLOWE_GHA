@@ -220,7 +220,8 @@ jobs:
         id: startrelease
         run: |
           $refName = "${{ github.ref_name }}"
-
+          
+          $gitHubRepo = "${{ github.repository }}"
           $releaseTag = $refName.Substring($refName.LastIndexOf('/')+1,9)
           $releaseSuffix = $releaseTag.Substring(1,8).Replace('.','')
           $assignmentId = "${{ steps.checkbuild.outputs.assignmentId }}"
@@ -229,6 +230,7 @@ jobs:
           Write-Host $releaseTag
           Write-Host $assignmentId
           Write-Host $releaseId
+          Write-Host $gitHubRepo
 
           $restUri = "https://vsrm.dev.azure.com/rnuesse/GitFlow_GITFLOWE_GHA/_apis/release/releases?api-version=5.1"
                       
@@ -250,7 +252,10 @@ jobs:
               },
               "releaseId": {
                 "value": "'+$releaseId+'"
-              }
+              },
+              "gitHubRepo": {
+                "value": "'+$gitHubRepo+'"
+              },
             }
           }'
 
